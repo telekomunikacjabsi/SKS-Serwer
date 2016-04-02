@@ -73,8 +73,7 @@ namespace SKS_Serwer
             string sourceIP = GetIP(connection);
             if (!Regex.IsMatch(sourceIP, settings.AllowedIPs)) // weryfikacja czy połączenie nadchodzi z dozwolonej puli adresów IP
             {
-                WriteMessage(stream, "AUTH", "FAIL");
-                connection.Close();
+                RejectConnection(connection);
                 return;
             }
             string[] message = ReceiveMessage(stream);
@@ -85,8 +84,7 @@ namespace SKS_Serwer
                     message[2] = message[2].Trim(); // w tym parametrze przesyłany jest identyfikator grupy
                     if (String.IsNullOrEmpty(message[2])) // jeśli id grupy jest puste zamykamy połączenie
                     {
-                        WriteMessage(stream, "AUTH", "FAIL");
-                        connection.Close();
+                        RejectConnection(connection);
                         return;
                     }
                     if (message[1] == "CLIENT")
@@ -94,23 +92,67 @@ namespace SKS_Serwer
                     else if (message[1] == "ADMIN")
                         WorkOnAdmin(connection, message[2]);
                     else
-                    {
-                        WriteMessage(stream, "AUTH", "FAIL");
-                        connection.Close();
-                    }
+                        RejectConnection(connection);
                 }
             }
             connection.Close();
+        }
+
+        private void RejectConnection(TcpClient connection)
+        {
+            NetworkStream stream = connection.GetStream();
+            try
+            {
+                WriteMessage(stream, "AUTH", "FAIL");
+            }
+            finally
+            {
+                connection.Close();
+                Console.WriteLine("Odrzucono połączenie z adresu {0}:{1}", GetIP(connection), GetPort(connection));
+            }
         }
 
         private void WorkOnClient(TcpClient connection, string groupID)
         {
             NetworkStream stream = connection.GetStream();
             WriteMessage(stream, "AUTH", "SUCCESS");
-            Console.WriteLine("Połączenie klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
+            Console.WriteLine("Połączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
+            lock (threadLocker)
+            {
+                groups.AddClient(connection.Client.RemoteEndPoint, groupID);
+            }
             while (true)
             {
-
+                string[] message = ReceiveMessage(stream);
+                if (message[0] == "DISCONNECT")
+                {
+                    Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
+                    connection.Close();
+                    lock (threadLocker)
+                    {
+                        groups.RemoveClient(connection.Client.RemoteEndPoint, groupID);
+                    }
+                    return;
+                }
+                else if (message[0] == "VERIFYLIST" && message.Length == 3)
+                {
+                    int listID = listManager.GetListID(message[1]);
+                    if (listID != -1)
+                    {
+                        bool result;
+                        string listString = String.Empty;
+                        lock (threadLocker)
+                        {
+                            result = listManager.VerifyList(listID, message[2]);
+                            if (!result) // jeśli listy się nie zgadzają, tzn. klient ma nieaktualną listę
+                                listString = listManager.GetListString((ListID)listID);
+                        }
+                        if (result)
+                            WriteMessage(stream, "OK");
+                        else
+                            WriteMessage(stream, "LIST", listID.ToString(), listString); // w przypadku posiadania złej listy przez klienta jest ona automatycznie odsyłana
+                    }
+                }
             }
         }
 

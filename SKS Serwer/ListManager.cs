@@ -59,6 +59,11 @@ namespace SKS_Serwer
                 lines[i] = lines[i].Replace(";", String.Empty);
         }
 
+        public bool VerifyList(int listID, string checksum)
+        {
+            return VerifyList((ListID)listID, Encoding.ASCII.GetBytes(checksum));
+        }
+
         public bool VerifyList(ListID listID, byte[] checksum)
         {
             if (listID == ListID.Domains)
@@ -98,6 +103,20 @@ namespace SKS_Serwer
                 disallowedProcesses = Regex.Split(listString, ";");
                 File.WriteAllLines(settings.ProcessesListPath, disallowedProcesses);
             }
+        }
+
+        public int GetListID(string s)
+        {
+            int id;
+            bool success = Int32.TryParse(s, out id);
+            if (success)
+            {
+                if (Enum.IsDefined(typeof(ListID), id))
+                    return id;
+                else return -1;
+            }
+            else
+                return -1;
         }
     }
 
