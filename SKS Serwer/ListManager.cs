@@ -21,7 +21,6 @@ namespace SKS_Serwer
             if (File.Exists(settings.DomainsListPath))
             {
                 disallowedDomains = File.ReadAllLines(settings.DomainsListPath).Where(value => RegexValidator.IsValidRegex(value)).ToArray(); // wybieramy tylko reguły które są poprawnymi wyrażeniami regularnymi
-                RemoveSemicolons(disallowedDomains);
                 domainsListChecksum = CalculateMD5(disallowedDomains);
             }
             else
@@ -33,7 +32,6 @@ namespace SKS_Serwer
             if (File.Exists(settings.ProcessesListPath))
             {
                 disallowedProcesses = File.ReadAllLines(settings.ProcessesListPath).Where(value => RegexValidator.IsValidRegex(value)).ToArray();
-                RemoveSemicolons(disallowedProcesses);
                 processesListChecksum = CalculateMD5(disallowedProcesses);
             }
             else
@@ -50,13 +48,6 @@ namespace SKS_Serwer
             var checkSum = MD5.Create();
             byte[] bytes = Encoding.Default.GetBytes(sum.ToString());
             return checkSum.ComputeHash(bytes);
-        }
-
-        private void RemoveSemicolons(string[] lines) // usuwa średniki ze względu na ich wykorzystanie podczas transmisji komunikatów (używane są do oddzielania argumentów)
-        {
-            int length = lines.Length;
-            for (int i = 0; i < length; i++)
-                lines[i] = lines[i].Replace(";", String.Empty);
         }
 
         public bool VerifyList(int listID, string checksum)

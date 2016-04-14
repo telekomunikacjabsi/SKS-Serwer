@@ -173,18 +173,23 @@ namespace SKS_Serwer
             while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
             {
                 string msg = Encoding.ASCII.GetString(bytes, 0, i);
-                return Regex.Split(msg, ";"); // automatyczny podział komunikatu na argumenty
+                string[] args = Regex.Split(msg, ";"); // automatyczny podział komunikatu na argumenty
+                for (int j = 0; j < args.Length; j++)
+                    args[j] = args[j].Replace("&sem", ";");
+                return args;
             }
             return new string[] { String.Empty };
         }
 
         private void WriteMessage(NetworkStream stream, params string[] message)
         {
-            WriteMessage(stream, String.Join(";", message));
+            for (int i = 0; i < message.Length; i++)
+                message[i] = message[i].Replace(";", "&sem"); // usuwa średnik z wiadomości ze względu na ich użycie przy podziale komunikatów
+            _WriteMessage(stream, String.Join(";", message));
         }
 
-        private void WriteMessage(NetworkStream stream, string message)
-        {
+        private void _WriteMessage(NetworkStream stream, string message)
+        { 
             byte[] bytes = Encoding.ASCII.GetBytes(message);
             stream.Write(bytes, 0, bytes.Length);
         }
