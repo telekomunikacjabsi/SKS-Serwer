@@ -1,19 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SKS_Serwer
 {
     class Worker
     {
-        ListManager listManager;
-        Groups groups;
+        ListManager listManager; // udostępnia dostęp do list zabronionych domen i procesów
+        Groups groups; // grupuje klientów według identyfikatora grupy
         Settings settings;
         object threadLocker;
 
@@ -39,159 +35,115 @@ namespace SKS_Serwer
         private void AcceptClients(TcpListener listener)
         {
             Console.WriteLine("Serwer uruchomiono pomyślnie!");
-            Console.WriteLine("Adres serwera: {0}:{1}", GetIP(listener), GetPort(listener));
+            Console.WriteLine("Adres serwera: {0}:{1}", Connection.GetIP(listener), Connection.GetPort(listener));
             while (true)
             {
-                TcpClient client = listener.AcceptTcpClient();
-                new Thread(() => FinalizeConnection(client)).Start();
+                Connection clientConnection = new Connection(listener.AcceptTcpClient());
+                new Thread(() => FinalizeConnection(clientConnection)).Start();
             }
         }
 
-        public string GetIP(TcpListener listener)
+        private void FinalizeConnection(Connection connection)
         {
-            return ((IPEndPoint)listener.LocalEndpoint).Address.ToString();
-        }
-
-        public string GetPort(TcpListener listener)
-        {
-            return ((IPEndPoint)listener.LocalEndpoint).Port.ToString();
-        }
-
-        public string GetIP(TcpClient client)
-        {
-            return ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-        }
-
-        public string GetPort(TcpClient client)
-        {
-            return ((IPEndPoint)client.Client.RemoteEndPoint).Port.ToString();
-        }
-
-        private void FinalizeConnection(TcpClient connection)
-        {
-            NetworkStream stream = connection.GetStream();
-            string sourceIP = GetIP(connection);
-            if (!Regex.IsMatch(sourceIP, settings.AllowedIPs)) // weryfikacja czy połączenie nadchodzi z dozwolonej puli adresów IP
+            if (!Regex.IsMatch(connection.IP, settings.AllowedIPs)) // weryfikacja czy połączenie nadchodzi z dozwolonej puli adresów IP
             {
-                RejectConnection(connection);
+                connection.Reject();
                 return;
             }
-            string[] message = ReceiveMessage(stream);
-            if (message.Length == 3) // w komunikacie oczekujemy dokładnie trzech argumentów
+            connection.ReceiveMessage();
+            if (connection.Command == CommandSet.Connect)
             {
-                if (message[0] == "CONNECT")
+                string type = connection[0];
+                string groupID = connection[1].Trim();
+                if (String.IsNullOrEmpty(groupID)) // jeśli id grupy jest puste zamykamy połączenie
                 {
-                    message[2] = message[2].Trim(); // w tym parametrze przesyłany jest identyfikator grupy
-                    if (String.IsNullOrEmpty(message[2])) // jeśli id grupy jest puste zamykamy połączenie
-                    {
-                        RejectConnection(connection);
-                        return;
-                    }
-                    if (message[1] == "CLIENT")
-                        WorkOnClient(connection, message[2]);
-                    else if (message[1] == "ADMIN")
-                        WorkOnAdmin(connection, message[2]);
-                    else
-                        RejectConnection(connection);
+                    connection.Reject();
+                    return;
                 }
+                connection.SetGroupID(groupID);
+                if (type == "CLIENT")
+                {
+                    connection.SendMessage(CommandSet.AuthSuccess);
+                    WorkOnClient(connection);
+                }
+                else if (type == "ADMIN")
+                {
+                    connection.SendMessage(CommandSet.AuthSuccess);
+                    WorkOnAdmin(connection);
+                }
+                else
+                    connection.Reject();
+            }
+            else
+                connection.Reject();
+        }
+
+        private void WorkOnClient(Connection connection)
+        {
+            Console.WriteLine("Połączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", connection.GroupID, connection.IP, connection.Port);
+            lock (threadLocker)
+            {
+                groups.AddClient(connection);
+            }
+            while (true)
+            {
+                connection.ReceiveMessage();
+                if (connection.Command == CommandSet.Disconnect)
+                {
+                    Disconnect(connection);
+                    return;
+                }
+                else if (connection.Command == CommandSet.VerifyList)
+                    VerifyList(connection);
+                else
+                {
+                    Disconnect(connection);
+                    return;
+                }
+            }
+        }
+
+        private void Disconnect(Connection connection)
+        {
+            Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", connection.GroupID, connection.IP, connection.Port);
+            lock (threadLocker)
+            {
+                groups.RemoveClient(connection);
             }
             connection.Close();
         }
 
-        private void RejectConnection(TcpClient connection)
+        private void VerifyList(Connection connection)
         {
-            NetworkStream stream = connection.GetStream();
-            try
+            int listID = listManager.GetListID(connection[0]);
+            if (listID != -1)
             {
-                WriteMessage(stream, "AUTH", "FAIL");
-            }
-            finally
-            {
-                connection.Close();
-                Console.WriteLine("Odrzucono połączenie z adresu {0}:{1}", GetIP(connection), GetPort(connection));
+                bool result;
+                string listString = String.Empty;
+                lock (threadLocker)
+                {
+                    result = listManager.VerifyList(listID, connection[1]);
+                    if (!result) // jeśli listy się nie zgadzają, tzn. klient ma nieaktualną listę
+                        listString = listManager.GetListString((ListID)listID);
+                }
+                if (result)
+                    connection.SendMessage(CommandSet.OK);
+                else
+                    connection.SendMessage(CommandSet.List, listID.ToString(), listString); // w przypadku posiadania złej listy przez klienta jest ona automatycznie odsyłana
             }
         }
 
-        private void WorkOnClient(TcpClient connection, string groupID)
+        private void WorkOnAdmin(Connection connection)
         {
-            NetworkStream stream = connection.GetStream();
-            WriteMessage(stream, "AUTH", "SUCCESS");
-            Console.WriteLine("Połączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
-            lock (threadLocker)
-            {
-                groups.AddClient(connection.Client.RemoteEndPoint, groupID);
-            }
-            while (true)
-            {
-                string[] message = ReceiveMessage(stream);
-                if (message[0] == "DISCONNECT")
-                {
-                    Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
-                    connection.Close();
-                    lock (threadLocker)
-                    {
-                        groups.RemoveClient(connection.Client.RemoteEndPoint, groupID);
-                    }
-                    return;
-                }
-                else if (message[0] == "VERIFYLIST" && message.Length == 3)
-                {
-                    int listID = listManager.GetListID(message[1]);
-                    if (listID != -1)
-                    {
-                        bool result;
-                        string listString = String.Empty;
-                        lock (threadLocker)
-                        {
-                            result = listManager.VerifyList(listID, message[2]);
-                            if (!result) // jeśli listy się nie zgadzają, tzn. klient ma nieaktualną listę
-                                listString = listManager.GetListString((ListID)listID);
-                        }
-                        if (result)
-                            WriteMessage(stream, "OK");
-                        else
-                            WriteMessage(stream, "LIST", listID.ToString(), listString); // w przypadku posiadania złej listy przez klienta jest ona automatycznie odsyłana
-                    }
-                }
-            }
-        }
-
-        private void WorkOnAdmin(TcpClient connection, string groupID)
-        {
-            NetworkStream stream = connection.GetStream();
-            WriteMessage(stream, "AUTH", "SUCCESS");
             while (true)
             {
 
             }
         }
 
-        private string[] ReceiveMessage(NetworkStream stream)
+        private void UnknownCommand(Connection connection, string commandText)
         {
-            int i;
-            byte[] bytes = new byte[256];
-            while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
-            {
-                string msg = Encoding.ASCII.GetString(bytes, 0, i);
-                string[] args = Regex.Split(msg, ";"); // automatyczny podział komunikatu na argumenty
-                for (int j = 0; j < args.Length; j++)
-                    args[j] = args[j].Replace("&sem", ";");
-                return args;
-            }
-            return new string[] { String.Empty };
-        }
-
-        private void WriteMessage(NetworkStream stream, params string[] message)
-        {
-            for (int i = 0; i < message.Length; i++)
-                message[i] = message[i].Replace(";", "&sem"); // usuwa średnik z wiadomości ze względu na ich użycie przy podziale komunikatów
-            _WriteMessage(stream, String.Join(";", message));
-        }
-
-        private void _WriteMessage(NetworkStream stream, string message)
-        { 
-            byte[] bytes = Encoding.ASCII.GetBytes(message);
-            stream.Write(bytes, 0, bytes.Length);
+            Console.WriteLine("Nieznana komenda '{0}' od klienta, grupa: \"{1}\", IP: \"{2}:{3}\"", commandText, connection.GroupID, connection.IP, connection.Port);
         }
     }
 }

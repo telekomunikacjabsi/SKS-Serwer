@@ -43,6 +43,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client.cs" />
+    <Compile Include="Command.cs" />
+    <Compile Include="CommandSet.cs" />
+    <Compile Include="Connection.cs" />
     <Compile Include="Groups.cs" />
     <Compile Include="ListManager.cs" />
     <Compile Include="Program.cs" />
