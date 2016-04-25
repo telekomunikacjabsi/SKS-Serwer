@@ -89,11 +89,21 @@ namespace SKS_Serwer
                     }
                     if (message[1] == "CLIENT")
                         WorkOnClient(connection, message[2]);
-                    else if (message[1] == "ADMIN")
-                        WorkOnAdmin(connection, message[2]);
                     else
                         RejectConnection(connection);
                 }
+            }
+            else if (message.Length == 4)
+            {
+                message[2] = message[2].Trim(); if (String.IsNullOrEmpty(message[2])) // jeśli id grupy jest puste zamykamy połączenie
+                {
+                    RejectConnection(connection);
+                    return;
+                }
+                if (message[1] == "ADMIN")
+                    WorkOnAdmin(connection, message[2], message[3]);
+                else
+                    RejectConnection(connection);
             }
             connection.Close();
         }
@@ -127,6 +137,8 @@ namespace SKS_Serwer
                 if (message[0] == "DISCONNECT")
                 {
                     Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
+
+
                     connection.Close();
                     lock (threadLocker)
                     {
@@ -156,13 +168,19 @@ namespace SKS_Serwer
             }
         }
 
-        private void WorkOnAdmin(TcpClient connection, string groupID)
+        private void WorkOnAdmin(TcpClient connection, string groupID, string password)
         {
             NetworkStream stream = connection.GetStream();
             WriteMessage(stream, "AUTH", "SUCCESS");
+            Console.WriteLine("Połączono admina, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
             while (true)
             {
-
+              /*  string[] message = ReceiveMessage(stream);
+                if (message[0] == "DISCONNECT")
+                {
+                    Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, GetIP(connection), GetPort(connection));
+                    connection.Close();
+                }*/
             }
         }
 
