@@ -10,7 +10,8 @@ namespace SKS_Serwer
     {
         public Command Command { get; private set; }
         public string IP { get; private set; }
-        public string Port { get; private set; }
+        public string Port { get; private set; } // port klienta z którym połączony jest serwer
+        public string SecondPort { get; set; } // port klienta z którym łączy się admin
         public string GroupID { get; private set; }
         string[] parameters;
         TcpClient client;
@@ -22,6 +23,7 @@ namespace SKS_Serwer
             stream = this.client.GetStream();
             IP = GetIP();
             Port = GetPort();
+            SecondPort = "9000";
         }
 
         public void ReceiveMessage()
@@ -38,7 +40,7 @@ namespace SKS_Serwer
                 {
                     parameters = new string[args.Length - 1];
                     for (int j = 1; j < args.Length; j++)
-                        parameters[j - 1] = args[j];
+                        parameters[j - 1] = args[j].Trim();
                 }
                 if (args.Length > 0)
                 {
@@ -58,14 +60,14 @@ namespace SKS_Serwer
                 Console.WriteLine("Komenda '{0}' nie spełnia wymaganych warunków. Wysyłanie nie powiodło się.", command.Text);
             }
             for (int i = 0; i < parameters.Length; i++)
-                parameters[i] = parameters[i];
+                parameters[i] = parameters[i].Trim();
             byte[] bytes = Encoding.UTF8.GetBytes(String.Join(";", command.Text, String.Join(";", parameters)));
             stream.Write(bytes, 0, bytes.Length);
         }
 
         public void Reject()
         {
-            SendMessage(CommandSet.AuthFail);
+            SendMessage(CommandSet.Auth, "FAIL");
             Close();
         }
 

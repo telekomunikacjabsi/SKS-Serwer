@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
@@ -63,12 +64,12 @@ namespace SKS_Serwer
                 connection.SetGroupID(groupID);
                 if (type == "CLIENT")
                 {
-                    connection.SendMessage(CommandSet.AuthSuccess);
+                    connection.SendMessage(CommandSet.Auth, "SUCCESS");
                     WorkOnClient(connection);
                 }
                 else if (type == "ADMIN")
                 {
-                    connection.SendMessage(CommandSet.AuthSuccess);
+                    connection.SendMessage(CommandSet.Auth, "FAIL");
                     WorkOnAdmin(connection);
                 }
                 else
@@ -87,20 +88,38 @@ namespace SKS_Serwer
             }
             while (true)
             {
-                connection.ReceiveMessage();
-                if (connection.Command == CommandSet.Disconnect)
+                try
                 {
-                    Disconnect(connection);
-                    return;
+                    connection.ReceiveMessage();
+                    if (connection.Command == CommandSet.Disconnect)
+                    {
+                        Disconnect(connection);
+                        return;
+                    }
+                    else if (connection.Command == CommandSet.VerifyList)
+                        VerifyList(connection);
+                    else if (connection.Command == CommandSet.Port)
+                        SetPort(connection);
+                    else
+                    {
+                        Disconnect(connection);
+                        return;
+                    }
                 }
-                else if (connection.Command == CommandSet.VerifyList)
-                    VerifyList(connection);
-                else
+                catch (IOException)
                 {
                     Disconnect(connection);
                     return;
                 }
             }
+        }
+
+        private void SetPort(Connection connection) // ustawia port na którym klient chce aby admin się z nim połączył
+        {
+            int port = 9000;
+            bool parseResult = Int32.TryParse(connection[0], out port);
+            if (parseResult)
+                connection.SecondPort = connection[0];
         }
 
         private void Disconnect(Connection connection)

@@ -55,7 +55,7 @@ namespace SKS_Serwer
             return VerifyList((ListID)listID, Encoding.ASCII.GetBytes(checksum));
         }
 
-        public bool VerifyList(ListID listID, byte[] checksum)
+        private bool VerifyList(ListID listID, byte[] checksum)
         {
             if (listID == ListID.Domains)
                 return checksum == domainsListChecksum;
@@ -79,19 +79,19 @@ namespace SKS_Serwer
                     return String.Empty;
                 lines = disallowedProcesses;
             }
-            return String.Join(";", lines);
+            return String.Join(Environment.NewLine, lines);
         }
 
         public void SetListFromString(ListID listID, string listString)
         {
             if (listID == ListID.Domains)
             {
-                disallowedDomains = Regex.Split(listString, ";");
+                disallowedDomains = Regex.Split(listString, Environment.NewLine);
                 File.WriteAllLines(settings.DomainsListPath, disallowedDomains);
             }
             else if (listID == ListID.Processes)
             {
-                disallowedProcesses = Regex.Split(listString, ";");
+                disallowedProcesses = Regex.Split(listString, Environment.NewLine);
                 File.WriteAllLines(settings.ProcessesListPath, disallowedProcesses);
             }
         }
