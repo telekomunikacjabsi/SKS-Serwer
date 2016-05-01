@@ -21,7 +21,6 @@ namespace SKS_Serwer
             if (File.Exists(settings.DomainsListPath))
             {
                 disallowedDomains = File.ReadAllLines(settings.DomainsListPath).Where(value => RegexValidator.IsValidRegex(value)).ToArray(); // wybieramy tylko reguły które są poprawnymi wyrażeniami regularnymi
-                RemoveSemicolons(disallowedDomains);
                 domainsListChecksum = CalculateMD5(disallowedDomains);
             }
             else
@@ -33,7 +32,6 @@ namespace SKS_Serwer
             if (File.Exists(settings.ProcessesListPath))
             {
                 disallowedProcesses = File.ReadAllLines(settings.ProcessesListPath).Where(value => RegexValidator.IsValidRegex(value)).ToArray();
-                RemoveSemicolons(disallowedProcesses);
                 processesListChecksum = CalculateMD5(disallowedProcesses);
             }
             else
@@ -52,19 +50,12 @@ namespace SKS_Serwer
             return checkSum.ComputeHash(bytes);
         }
 
-        private void RemoveSemicolons(string[] lines) // usuwa średniki ze względu na ich wykorzystanie podczas transmisji komunikatów (używane są do oddzielania argumentów)
-        {
-            int length = lines.Length;
-            for (int i = 0; i < length; i++)
-                lines[i] = lines[i].Replace(";", String.Empty);
-        }
-
         public bool VerifyList(int listID, string checksum)
         {
             return VerifyList((ListID)listID, Encoding.ASCII.GetBytes(checksum));
         }
 
-        public bool VerifyList(ListID listID, byte[] checksum)
+        private bool VerifyList(ListID listID, byte[] checksum)
         {
             if (listID == ListID.Domains)
                 return checksum == domainsListChecksum;
@@ -88,19 +79,19 @@ namespace SKS_Serwer
                     return String.Empty;
                 lines = disallowedProcesses;
             }
-            return String.Join(";", lines);
+            return String.Join(Environment.NewLine, lines);
         }
 
         public void SetListFromString(ListID listID, string listString)
         {
             if (listID == ListID.Domains)
             {
-                disallowedDomains = Regex.Split(listString, ";");
+                disallowedDomains = Regex.Split(listString, Environment.NewLine);
                 File.WriteAllLines(settings.DomainsListPath, disallowedDomains);
             }
             else if (listID == ListID.Processes)
             {
-                disallowedProcesses = Regex.Split(listString, ";");
+                disallowedProcesses = Regex.Split(listString, Environment.NewLine);
                 File.WriteAllLines(settings.ProcessesListPath, disallowedProcesses);
             }
         }
