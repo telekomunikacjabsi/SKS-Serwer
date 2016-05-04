@@ -8,7 +8,7 @@ namespace SKS_Serwer
 {
     public class Worker
     {
-        internal Groups groups; // grupuje klientów według identyfikatora grupy
+        private Groups groups; // grupuje klientów według identyfikatora grupy
         private ListManager listManager; // udostępnia dostęp do list zabronionych domen i procesów
         private Settings settings;
 
@@ -53,16 +53,28 @@ namespace SKS_Serwer
             {
                 string type = connection[0];
                 string groupID = connection[1].Trim();
+                string groupPassword = connection[2].Trim();
+                Console.WriteLine(groupPassword);
                 if (String.IsNullOrEmpty(groupID)) // jeśli id grupy jest puste zamykamy połączenie
                 {
                     connection.Reject();
                     return;
                 }
-                connection.SetGroupID(groupID);
                 if (type == "CLIENT")
-                    new ClientWorker(connection, groups, listManager).DoWork(); // dalsza obsługa połączenia z klientem
+                    new ClientWorker(connection, groups, listManager).DoWork(groupID, groupPassword); // dalsza obsługa połączenia z klientem
                 else if (type == "ADMIN")
-                    new AdminWorker(connection, listManager).DoWork(); // dalsza obsługa połączenia z administratorem
+                {
+                    lock (ThreadLocker.Lock)
+                    {
+                        if (!groups.VerifyPassword(groupID, groupPassword)) // jeśli hasło podane przez administratora nie jest prawidłowe
+                        {
+                            connection.Reject();
+                            return;
+                        }
+                    }
+                    new AdminWorker(connection, groups, listManager).DoWork(groupID); // dalsza obsługa połączenia z administratorem
+
+                }
                 else
                     connection.Reject();
             }

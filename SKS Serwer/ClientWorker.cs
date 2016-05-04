@@ -7,7 +7,8 @@ namespace SKS_Serwer
     {
         Connection connection;
         Groups groups;
-        ListManager listManager; 
+        ListManager listManager;
+        Client client;
 
         public ClientWorker(Connection connection, Groups groups, ListManager listManager)
         {
@@ -16,14 +17,15 @@ namespace SKS_Serwer
             this.listManager = listManager;
         }
 
-        public void DoWork()
+        public void DoWork(string groupID, string groupPassword)
         {
+            client = new Client(groupID, connection.IP);
             lock (ThreadLocker.Lock)
             {
-                groups.AddClient(connection);
+                groups.AddClient(client, groupPassword);
             }
             connection.SendMessage(CommandSet.Auth, "SUCCESS");
-            Console.WriteLine("Połączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", connection.GroupID, connection.IP, connection.Port);
+            Console.WriteLine("Połączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, connection.IP, connection.Port);
             while (true)
             {
                 try
@@ -54,13 +56,12 @@ namespace SKS_Serwer
 
         private void Disconnect(Connection connection)
         {
-            Console.WriteLine("DISCONNECT()");
             lock (ThreadLocker.Lock)
             {
-                groups.RemoveClient(connection);
+                groups.RemoveClient(client);
             }
             connection.Close();
-            Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", connection.GroupID, connection.IP, connection.Port);
+            Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", client.GroupID, connection.IP, connection.Port);
         }
 
         private void SetPort(Connection connection) // ustawia port na którym klient chce aby admin się z nim połączył
@@ -68,7 +69,7 @@ namespace SKS_Serwer
             int port = 9000;
             bool parseResult = Int32.TryParse(connection[0], out port);
             if (parseResult)
-                connection.SecondPort = connection[0];
+                client.AdminPort = connection[0];
         }
     }
 }

@@ -11,8 +11,7 @@ namespace SKS_Serwer
         public Command Command { get; private set; }
         public string IP { get; private set; }
         public string Port { get; private set; } // port klienta z którym połączony jest serwer
-        public string SecondPort { get; set; } // port klienta z którym łączy się admin
-        public string GroupID { get; private set; }
+        
         string[] parameters;
         TcpClient client;
         NetworkStream stream;
@@ -23,7 +22,6 @@ namespace SKS_Serwer
             stream = this.client.GetStream();
             IP = GetIP();
             Port = GetPort();
-            SecondPort = "9000";
         }
 
         public void ReceiveMessage()
@@ -80,11 +78,6 @@ namespace SKS_Serwer
         public EndPoint GetEndPoint()
         {
             return client.Client.RemoteEndPoint;
-        }
-
-        public void SetGroupID(string groupID)
-        {
-            GroupID = groupID;
         }
 
         public string this[int index]
