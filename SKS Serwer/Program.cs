@@ -6,10 +6,10 @@ namespace SKS_Serwer
     {
         static void Main(string[] args)
         {
-            Worker worker;
+            Worker worker = new Worker();
             try
             {
-                worker = new Worker();
+                worker.Start();
             }
             catch (Exception ex)
             {

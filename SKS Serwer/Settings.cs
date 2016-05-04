@@ -4,7 +4,7 @@ using System.Xml;
 
 namespace SKS_Serwer
 {
-    class Settings
+    public class Settings
     {
         public int Port { get; private set; }
         public string DomainsListPath { get; private set; }

@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace SKS_Serwer
 {
-    class ListManager
+    public class ListManager
     {
         private string[] disallowedDomains;
         private string[] disallowedProcesses;
@@ -50,9 +50,9 @@ namespace SKS_Serwer
             return checkSum.ComputeHash(bytes);
         }
 
-        public bool VerifyList(int listID, string checksum)
+        public bool VerifyList(ListID listID, string checksum)
         {
-            return VerifyList((ListID)listID, Encoding.ASCII.GetBytes(checksum));
+            return VerifyList(listID, Encoding.ASCII.GetBytes(checksum));
         }
 
         private bool VerifyList(ListID listID, byte[] checksum)
@@ -62,6 +62,26 @@ namespace SKS_Serwer
             else if (listID == ListID.Processes)
                 return checksum == processesListChecksum;
             return false;
+        }
+
+        public void VerifyList(Connection connection)
+        {
+            ListID listID = GetListID(connection[0]);
+            if (listID != ListID.Unknown)
+            {
+                bool result;
+                string listString = String.Empty;
+                lock (ThreadLocker.Lock)
+                {
+                    result = VerifyList(listID, connection[1]);
+                    if (!result) // jeśli listy się nie zgadzają, tzn. klient ma nieaktualną listę
+                        listString = GetListString(listID);
+                }
+                if (result)
+                    connection.SendMessage(CommandSet.OK);
+                else
+                    connection.SendMessage(CommandSet.List, listID.ToString(), listString); // w przypadku posiadania złej listy przez klienta lub admina jest ona automatycznie odsyłana
+            }
         }
 
         public string GetListString(ListID listID)
@@ -96,21 +116,21 @@ namespace SKS_Serwer
             }
         }
 
-        public int GetListID(string s)
+        public ListID GetListID(string s)
         {
             int id;
             bool success = Int32.TryParse(s, out id);
             if (success)
             {
                 if (Enum.IsDefined(typeof(ListID), id))
-                    return id;
-                else return -1;
+                    return (ListID)id;
+                else return ListID.Unknown;
             }
             else
-                return -1;
+                return ListID.Unknown;
         }
     }
 
     public enum ListID
-    { Domains, Processes };
+    { Domains, Processes, Unknown };
 }

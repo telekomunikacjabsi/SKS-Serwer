@@ -3,7 +3,7 @@ using System.Net;
 
 namespace SKS_Serwer
 {
-    class Groups
+    public class Groups
     {
         private List<Group> groups;
 

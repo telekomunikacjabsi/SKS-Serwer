@@ -11,5 +11,6 @@ namespace SKS_Serwer
         public static readonly Command OK = new Command("OK");
         public static readonly Command List = new Command("LIST", 2);
         public static readonly Command Port = new Command("PORT", 1);
+        public static readonly Command Users = new Command("USERS");
     }
 }
