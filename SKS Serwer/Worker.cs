@@ -54,7 +54,6 @@ namespace SKS_Serwer
                 string type = connection[0];
                 string groupID = connection[1].Trim();
                 string groupPassword = connection[2].Trim();
-                Console.WriteLine(groupPassword);
                 if (String.IsNullOrEmpty(groupID)) // jeśli id grupy jest puste zamykamy połączenie
                 {
                     connection.Reject();
