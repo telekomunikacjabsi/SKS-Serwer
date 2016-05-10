@@ -10,16 +10,27 @@ namespace SKS_Serwer
         ListManager listManager;
         Client client;
 
-        public ClientWorker(Connection connection, Groups groups, ListManager listManager)
+        public ClientWorker(Connection connection, Groups groups, ListManager listManager, string adminPort)
         {
+            client = new Client();
             this.connection = connection;
             this.groups = groups;
             this.listManager = listManager;
+            SetPort(adminPort);
+        }
+
+        private void SetPort(string port)
+        {
+            int _port = 9000;
+            bool parseResult = Int32.TryParse(port, out _port);
+            if (parseResult)
+                client.AdminPort = port;
         }
 
         public void DoWork(string groupID, string groupPassword)
         {
-            client = new Client(groupID, connection.IP);
+            client.GroupID = groupID;
+            client.IP = connection.IP;
             lock (ThreadLocker.Lock)
             {
                 groups.AddClient(client, groupPassword);
@@ -38,8 +49,6 @@ namespace SKS_Serwer
                     }
                     else if (connection.Command == CommandSet.VerifyList)
                         listManager.VerifyList(connection);
-                    else if (connection.Command == CommandSet.Port)
-                        SetPort(connection);
                     else
                     {
                         Disconnect(connection);
@@ -62,14 +71,6 @@ namespace SKS_Serwer
             }
             connection.Close();
             Console.WriteLine("Rozłączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", client.GroupID, connection.IP, connection.Port);
-        }
-
-        private void SetPort(Connection connection) // ustawia port na którym klient chce aby admin się z nim połączył
-        {
-            int port = 9000;
-            bool parseResult = Int32.TryParse(connection[0], out port);
-            if (parseResult)
-                client.AdminPort = connection[0];
         }
     }
 }

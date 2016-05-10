@@ -70,7 +70,7 @@ namespace SKS_Serwer
         private void UpdateList()
         {
             ListID listID = listManager.GetListID(connection[0]);
-            string listContent = connection[1].Trim();
+            string listContent = connection[1];
             lock (ThreadLocker.Lock)
             {
                 listManager.SetListFromString(listID, listContent);

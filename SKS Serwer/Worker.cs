@@ -49,19 +49,22 @@ namespace SKS_Serwer
                 return;
             }
             connection.ReceiveMessage();
-            if (connection.Command == CommandSet.Connect)
+            if (connection.Command == CommandSet.ClientConnect || connection.Command == CommandSet.AdminConnect)
             {
                 string type = connection[0];
-                string groupID = connection[1].Trim();
-                string groupPassword = connection[2].Trim();
+                string groupID = connection[1];
+                string groupPassword = connection[2];
                 if (String.IsNullOrEmpty(groupID)) // jeśli id grupy jest puste zamykamy połączenie
                 {
                     connection.Reject();
                     return;
                 }
-                if (type == "CLIENT")
-                    new ClientWorker(connection, groups, listManager).DoWork(groupID, groupPassword); // dalsza obsługa połączenia z klientem
-                else if (type == "ADMIN")
+                if (connection.Command == CommandSet.ClientConnect && type == "CLIENT")
+                {
+                    string adminPort = connection[3]; // numer portu na którym klient będzie oczekiwać na administratora
+                    new ClientWorker(connection, groups, listManager, adminPort).DoWork(groupID, groupPassword); // dalsza obsługa połączenia z klientem
+                }
+                else if (connection.Command == CommandSet.AdminConnect && type == "ADMIN")
                 {
                     lock (ThreadLocker.Lock)
                     {

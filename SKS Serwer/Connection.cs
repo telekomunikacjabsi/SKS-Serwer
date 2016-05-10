@@ -9,12 +9,13 @@ namespace SKS_Serwer
     public class Connection
     {
         public Command Command { get; private set; }
-        public string IP { get; private set; }
-        public string Port { get; private set; } // port klienta z którym połączony jest serwer
-        
-        string[] parameters;
         TcpClient client;
         NetworkStream stream;
+        string[] parameters;
+        public string IP { get; private set; }
+        public string Port { get; private set; } // port klienta z którym połączony jest serwer
+        readonly string packetEndSign = "!$"; // znacznik końca pakietu
+        string message;
 
         public Connection(TcpClient client)
         {
@@ -24,16 +25,23 @@ namespace SKS_Serwer
             Port = GetPort();
         }
 
-        public void ReceiveMessage()
+        public void ReceiveMessage(bool recurrentCall = false)
         {
-            Command = new Command(String.Empty);
+            string[] messages = null;
             int i;
+            Command = new Command(String.Empty); // zastąpić stałą null
             byte[] bytes = new byte[256];
             parameters = null;
-            while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+            if ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
             {
-                string msg = Encoding.UTF8.GetString(bytes, 0, i);
-                string[] args = Regex.Split(msg, ";"); // automatyczny podział komunikatu na argumenty
+                message += Encoding.UTF8.GetString(bytes, 0, i);
+                if (message.IndexOf(packetEndSign) == -1) // jeśli odczytana wiadomość nie zawiera znacznika końca wiadomości
+                    ReceiveMessage(true);
+                if (recurrentCall)
+                    return;
+                messages = SplitMessages(message);
+                message = messages[0];
+                string[] args = Regex.Split(message, ";"); // automatyczny podział komunikatu na argumenty
                 if (args.Length > 1)
                 {
                     parameters = new string[args.Length - 1];
@@ -47,7 +55,10 @@ namespace SKS_Serwer
                     else
                         Command = new Command(args[0].Trim());
                 }
-                return;
+                if (messages.Length == 2)
+                    message = messages[1].TrimStart();
+                else
+                    message = String.Empty;
             }
         }
 
@@ -56,11 +67,38 @@ namespace SKS_Serwer
             if (parameters.Length < command.ParametersCount) // jeśli liczba parametrów nie spełnia wymogów komendy
             {
                 Console.WriteLine("Komenda '{0}' nie spełnia wymaganych warunków. Wysyłanie nie powiodło się.", command.Text);
+                return;
             }
             for (int i = 0; i < parameters.Length; i++)
                 parameters[i] = parameters[i].Trim();
-            byte[] bytes = Encoding.UTF8.GetBytes(String.Join(";", command.Text, String.Join(";", parameters)));
-            stream.Write(bytes, 0, bytes.Length);
+            string msg = String.Join(";", command.Text, String.Join(";", parameters)) + packetEndSign;
+            byte[] bytes = Encoding.UTF8.GetBytes(msg);
+            try
+            {
+                stream.Write(bytes, 0, bytes.Length);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return;
+            }
+        }
+
+        private string[] SplitMessages(string message)
+        {
+            string[] array;
+            int index = message.IndexOf(packetEndSign);
+            if (index == -1)
+            {
+                array = new string[1];
+                array[0] = message;
+                return array;
+            }
+            array = new string[2];
+            array[0] = message.Substring(0, index);
+            array[1] = message.Substring(index + packetEndSign.Length);
+            return array;
         }
 
         public void Reject()
