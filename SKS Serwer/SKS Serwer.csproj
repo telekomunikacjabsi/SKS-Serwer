@@ -49,6 +49,8 @@
     <Compile Include="Command.cs" />
     <Compile Include="CommandSet.cs" />
     <Compile Include="Connection.cs" />
+    <Compile Include="Group.cs" />
+    <Compile Include="GroupCredentials.cs" />
     <Compile Include="Groups.cs" />
     <Compile Include="ListManager.cs" />
     <Compile Include="Program.cs" />

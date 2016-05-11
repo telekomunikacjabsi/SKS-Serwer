@@ -99,24 +99,6 @@ namespace SKS_Serwer
                 connection.SendMessage(CommandSet.OK);
         }
 
-        private bool ArraysEqual(byte[] a1, byte[] a2)
-        {
-            if (a1.Length != a2.Length)
-            {
-                Console.WriteLine("LENGTH");
-                return false;
-            }
-            for (int i = 0; i < a1.Length; i++)
-            {
-                int a = a1[i];
-                int b = a2[i];
-                Console.WriteLine(a + " - " + b + " - " + (a == b));
-                if (a1[i] != a2[i])
-                    return false;
-            }
-            return true;
-        }
-
         public string GetListString(ListID listID)
         {
             string[] lines = null;

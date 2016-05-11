@@ -13,5 +13,6 @@ namespace SKS_Serwer
         public static readonly Command List = new Command("LIST", 2);
         public static readonly Command Users = new Command("USERS");
         public static readonly Command LongMessage = new Command("LONG_MSG", 1);
+        public static readonly Command NewClient = new Command("NEW_CLIENT", 1);
     }
 }

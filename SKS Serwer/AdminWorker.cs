@@ -77,8 +77,17 @@ namespace SKS_Serwer
             }
         }
 
+        public void NotifyNewClient(Client client)
+        {
+            connection.SendMessage(CommandSet.NewClient, client.ToString());
+        }
+
         private void Disconnect()
         {
+            lock (ThreadLocker.Lock)
+            {
+                groups.DisassociateAdmin(groupID);
+            }
             connection.Close();
             Console.WriteLine("Rozłączono administratora, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, connection.IP, connection.Port);
         }

@@ -30,10 +30,11 @@ namespace SKS_Serwer
         public void DoWork(string groupID, string groupPassword)
         {
             client.GroupID = groupID;
+            client.GroupPassword = groupPassword;
             client.IP = connection.IP;
             lock (ThreadLocker.Lock)
             {
-                groups.AddClient(client, groupPassword);
+                groups.AddClient(client);
             }
             connection.SendMessage(CommandSet.Auth, "SUCCESS");
             Console.WriteLine("Połączono klienta, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, connection.IP, connection.Port);

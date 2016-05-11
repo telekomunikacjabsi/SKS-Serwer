@@ -66,16 +66,18 @@ namespace SKS_Serwer
                 }
                 else if (connection.Command == CommandSet.AdminConnect && type == "ADMIN")
                 {
+                    AdminWorker admin = null;
                     lock (ThreadLocker.Lock)
                     {
-                        if (!groups.VerifyPassword(groupID, groupPassword)) // jeśli hasło podane przez administratora nie jest prawidłowe
+                        if (!groups.VerifyPassword(groupID, groupPassword) || groups.IsAdminConnected(groupID)) // jeśli hasło podane przez administratora nie jest prawidłowe
                         {
                             connection.Reject();
                             return;
                         }
+                        admin = new AdminWorker(connection, groups, listManager);
+                        groups.AssociateAdmin(admin, groupID);
                     }
-                    new AdminWorker(connection, groups, listManager).DoWork(groupID); // dalsza obsługa połączenia z administratorem
-
+                    admin.DoWork(groupID); // dalsza obsługa połączenia z administratorem
                 }
                 else
                     connection.Reject();
