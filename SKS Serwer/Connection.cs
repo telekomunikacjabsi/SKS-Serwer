@@ -29,7 +29,7 @@ namespace SKS_Serwer
         {
             string[] messages = null;
             int i;
-            Command = null;
+            Command = new Command(String.Empty);
             byte[] bytes = new byte[256];
             parameters = null;
             if ((i = stream.Read(bytes, 0, bytes.Length)) != 0)

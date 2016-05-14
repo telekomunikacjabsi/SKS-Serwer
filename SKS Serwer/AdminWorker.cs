@@ -29,6 +29,7 @@ namespace SKS_Serwer
                 try
                 {
                     connection.ReceiveMessage();
+                    Console.WriteLine("RECEIVE");
                     if (connection.Command == CommandSet.Disconnect)
                     {
                         Disconnect();
