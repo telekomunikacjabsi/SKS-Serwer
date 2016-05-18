@@ -21,7 +21,7 @@ namespace SKS_Serwer
 
         public void DoWork(string groupID)
         {
-            this.groupID = groupID;
+            this.groupID = groupID.ToLower();
             connection.SendMessage(CommandSet.Auth, "SUCCESS");
             Console.WriteLine("Połączono administratora, grupa: \"{0}\", IP: \"{1}:{2}\"", groupID, connection.IP, connection.Port);
             while (true)
@@ -29,7 +29,6 @@ namespace SKS_Serwer
                 try
                 {
                     connection.ReceiveMessage();
-                    Console.WriteLine("RECEIVE");
                     if (connection.Command == CommandSet.Disconnect)
                     {
                         Disconnect();

@@ -29,6 +29,7 @@ namespace SKS_Serwer
 
         public void DoWork(string groupID, string groupPassword)
         {
+            groupID = groupID.ToLower();
             client.GroupID = groupID;
             client.GroupPassword = groupPassword;
             client.IP = connection.IP;
