@@ -11,7 +11,7 @@ namespace SKS_Serwer
 
         public Group(string ID)
         {
-            this.ID = ID;
+            this.ID = ID.ToLower();
             Init();
             Password = null;
         }
