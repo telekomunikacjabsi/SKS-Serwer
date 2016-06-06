@@ -7,8 +7,6 @@ namespace SKS_Serwer
     public class Settings
     {
         public int Port { get; private set; }
-        public string DomainsListPath { get; private set; }
-        public string ProcessesListPath { get; private set; }
         public string AllowedIPs { get; private set; }
 
         public Settings()
@@ -25,8 +23,6 @@ namespace SKS_Serwer
                     writer.WriteStartDocument();
                     writer.WriteStartElement("Settings");
                     writer.WriteElementString("Port", "5000");
-                    writer.WriteElementString("DomainsListPath", "domains.txt");
-                    writer.WriteElementString("ProcessesListPath", "processes.txt");
                     writer.WriteElementString("AllowedIPsRegex", ".*");
                     writer.WriteEndElement();
                     writer.WriteEndDocument();
@@ -52,10 +48,6 @@ namespace SKS_Serwer
                                 Console.WriteLine("Wartość {0} nie jest wartością odpowiednią dla ustawienia \"Port\"", reader.Value);
                             }
                         }
-                        else if (currentElement == "DomainsListPath")
-                            DomainsListPath = reader.Value;
-                        else if (currentElement == "ProcessesListPath")
-                            ProcessesListPath = reader.Value;
                         else if (currentElement == "AllowedIPsRegex")
                         {
                             if (!RegexValidator.IsValidRegex(reader.Value))

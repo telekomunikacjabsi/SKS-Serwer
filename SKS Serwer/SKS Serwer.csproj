@@ -52,7 +52,6 @@
     <Compile Include="Group.cs" />
     <Compile Include="GroupCredentials.cs" />
     <Compile Include="Groups.cs" />
-    <Compile Include="ListManager.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegexValidator.cs" />

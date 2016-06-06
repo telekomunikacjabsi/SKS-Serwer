@@ -9,7 +9,6 @@ namespace SKS_Serwer
     public class Worker
     {
         private Groups groups; // grupuje klientów według identyfikatora grupy
-        private ListManager listManager; // udostępnia dostęp do list zabronionych domen i procesów
         private Settings settings;
 
         public void Start()
@@ -25,7 +24,6 @@ namespace SKS_Serwer
             {
                 throw new Exception("Port " + settings.Port + " jest już zajęty. Uruchamianie serwera nie powiodło się.");
             }
-            listManager = new ListManager(settings);
             groups = new Groups();
             new Thread(() => AcceptClients(listener)).Start();
         }
@@ -62,7 +60,7 @@ namespace SKS_Serwer
                 if (connection.Command == CommandSet.ClientConnect && type == "CLIENT")
                 {
                     string adminPort = connection[3]; // numer portu na którym klient będzie oczekiwać na administratora
-                    new ClientWorker(connection, groups, listManager, adminPort).DoWork(groupID, groupPassword); // dalsza obsługa połączenia z klientem
+                    new ClientWorker(connection, groups, adminPort).DoWork(groupID, groupPassword); // dalsza obsługa połączenia z klientem
                 }
                 else if (connection.Command == CommandSet.AdminConnect && type == "ADMIN")
                 {
@@ -74,7 +72,7 @@ namespace SKS_Serwer
                             connection.Reject();
                             return;
                         }
-                        admin = new AdminWorker(connection, groups, listManager);
+                        admin = new AdminWorker(connection, groups);
                         groups.AssociateAdmin(admin, groupID);
                     }
                     admin.DoWork(groupID); // dalsza obsługa połączenia z administratorem

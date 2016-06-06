@@ -8,14 +8,12 @@ namespace SKS_Serwer
     {
         Connection connection;
         Groups groups;
-        ListManager listManager;
         string groupID;
 
-        public AdminWorker(Connection connection, Groups groups, ListManager listManager)
+        public AdminWorker(Connection connection, Groups groups)
         {
             this.connection = connection;
             this.groups = groups;
-            this.listManager = listManager;
             groupID = String.Empty;
         }
 
@@ -34,10 +32,6 @@ namespace SKS_Serwer
                         Disconnect();
                         return;
                     }
-                    else if (connection.Command == CommandSet.VerifyList)
-                        listManager.VerifyList(connection);
-                    else if (connection.Command == CommandSet.List)
-                        UpdateList();
                     else if (connection.Command == CommandSet.Users)
                         SendUsersList();
                     else
@@ -65,16 +59,6 @@ namespace SKS_Serwer
             }
             listString = listString.TrimEnd(';');
             connection.SendMessage(CommandSet.Users, listString);
-        }
-
-        private void UpdateList()
-        {
-            ListID listID = listManager.GetListID(connection[0]);
-            string listContent = connection[1];
-            lock (ThreadLocker.Lock)
-            {
-                listManager.SetListFromString(listID, listContent);
-            }
         }
 
         public void NotifyNewClient(Client client)

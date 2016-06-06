@@ -7,15 +7,13 @@ namespace SKS_Serwer
     {
         Connection connection;
         Groups groups;
-        ListManager listManager;
         Client client;
 
-        public ClientWorker(Connection connection, Groups groups, ListManager listManager, string adminPort)
+        public ClientWorker(Connection connection, Groups groups, string adminPort)
         {
             client = new Client();
             this.connection = connection;
             this.groups = groups;
-            this.listManager = listManager;
             SetPort(adminPort);
         }
 
@@ -49,8 +47,6 @@ namespace SKS_Serwer
                         Disconnect(connection);
                         return;
                     }
-                    else if (connection.Command == CommandSet.VerifyList)
-                        listManager.VerifyList(connection);
                     else
                     {
                         Disconnect(connection);
